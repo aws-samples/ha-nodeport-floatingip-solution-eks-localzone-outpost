@@ -1,0 +1,50 @@
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: my-floatingip-democluster
+  region: us-west-2
+availabilityZones: ["us-west-2a", "us-west-2b"]
+managedNodeGroups:
+  - name: my-floatingip-nodegroup
+    desiredCapacity: 2
+    availabilityZones: ["us-west-2a"]
+    instanceType: t3.medium
+    ami: ${AMI_ID}
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      set -o xtrace
+      /etc/eks/bootstrap.sh my-floatingip-democluster --use-max-pods false --kubelet-extra-args "--node-labels function=floatingip"
+      sudo echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.d/99-sysctl.conf
+      sudo sysctl -p /etc/sysctl.d/99-sysctl.conf
+      sudo sysctl --system
+      sudo yum install ec2-net-utils -y
+      sudo reboot
+  - name: my-workload-nodegroup
+    desiredCapacity: 1
+    availabilityZones: ["us-west-2a"]
+    instanceType: t3.medium
+    ami: ${AMI_ID}
+    iam:
+      attachPolicyARNs:
+        - arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy
+        - arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy
+        - arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore
+        - arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly
+        - arn:aws:iam::aws:policy/AmazonEC2ReadOnlyAccess
+    overrideBootstrapCommand: |
+      #!/bin/bash
+      set -o xtrace
+      /etc/eks/bootstrap.sh my-floatingip-democluster --use-max-pods false --kubelet-extra-args "--node-labels function=workload"
+      sudo echo "net.ipv4.ip_forward = 1" | sudo tee -a /etc/sysctl.d/99-sysctl.conf
+      sudo sysctl -p /etc/sysctl.d/99-sysctl.conf
+      sudo sysctl --system
+      sudo yum install ec2-net-utils -y
+      sudo reboot
+

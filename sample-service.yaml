@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ndc-faas
+  labels:
+   app: ndc-faas
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ndc-faas
+  template:
+    metadata:
+      labels:
+        app: ndc-faas
+    spec:
+      hostNetwork: true
+      containers:
+      - name: ndc-faas
+        image: wbitt/network-multitool
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 80
+          protocol: TCP
+      nodeSelector:
+        function: workload 
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ndc-faas
+  labels:
+    app: ndc-faas
+spec:
+  type: NodePort
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+      nodePort: 30007
+  selector:
+    app: ndc-faas

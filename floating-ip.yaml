@@ -1,0 +1,98 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: floatingip
+  labels:
+    app: floatingip
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: floatingip
+  template:
+    metadata:
+      labels:
+        app: floatingip
+    spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - floatingip
+            topologyKey: "kubernetes.io/hostname"
+      hostNetwork: true
+      containers:
+      - name: floatingip-container
+        image: ${AWS_ACCOUNT}.dkr.ecr.us-west-2.amazonaws.com/amazonlinux_utilities:latest
+        command: ['sh', '-c', 'while true; do sleep 3600; done;']
+        env:
+        - name: FLOATING_IP
+          valueFrom:
+            configMapKeyRef:
+              name: floating-ip
+              key: FLOATING_IP
+        - name: MY_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "100Mi"
+            cpu: "150m"
+        livenessProbe:
+          exec:
+            command:
+            - /bin/sh
+            - -c
+            - "/health-check.sh"
+          initialDelaySeconds: 20
+          periodSeconds: 2
+      initContainers:
+      - name: init-floatingip
+        image: ${AWS_ACCOUNT}.dkr.ecr.us-west-2.amazonaws.com/amazonlinux_utilities:latest
+        command: ['sh', '-c', 'python3.8 eip.py']
+        env:
+        - name: FLOATING_IP
+          valueFrom:
+            configMapKeyRef:
+              name: floating-ip
+              key: FLOATING_IP
+        - name: MY_HOSTNAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            memory: "100Mi"
+            cpu: "100m"
+          limits:
+            memory: "150Mi"
+            cpu: "150m"
+      nodeSelector:
+        function: floatingip 
+      tolerations:
+      - effect: NoExecute
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+        tolerationSeconds: 10
+      - effect: NoSchedule
+        key: node.kubernetes.io/unreachable
+        operator: Exists
+      - effect: NoExecute
+        key: node.kubernetes.io/not-ready
+        operator: Exists
+
+---   
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: floating-ip
+data:
+  FLOATING_IP: "${FLOATING_IP}"
