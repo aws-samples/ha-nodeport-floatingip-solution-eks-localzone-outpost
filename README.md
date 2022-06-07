@@ -23,9 +23,9 @@ To achieve this floating IP solution, we would need to follow the below steps
 
 ### Step 1:  Create the EKS cluster
 
-Please refer to EKS documentation for more details - Creating an Amazon EKS cluster (https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html)
+Please refer to EKS documentation for more details - [Creating an Amazon EKS cluster](https://docs.aws.amazon.com/eks/latest/userguide/create-cluster.html)
 
-Download the code & sample from the below link https://github.com/aws-samples/ha-nodeport-floatingip-solution-eks-localzone-outpost.git 
+Download the code & sample from the below [link](https://github.com/aws-samples/ha-nodeport-floatingip-solution-eks-localzone-outpost.git)
 
 Copy AWS CLI credentials 
 
@@ -61,19 +61,20 @@ kubectl get nodes
 To achieve this, retrieve the free IP from the subnet of worker node. 
  Below command will get the list of used ips in the worker node subnet , you can choose any free ip that is not in the list to be floating IP.
 
-### For Ipv4 use:
+### For IPV4 use:
 ``` 
-export SUBNET_ID=$(aws eks describe-nodegroup --cluster-name my-floatingip-democluster --nodegroup-name my-floatingip-nodegroup --query 'nodegroup.subnets[0]' --output text)
-aws ec2 describe-network-interfaces --filters Name=subnet-id,Values="$SUBNET_ID" |jq -r '.NetworkInterfaces[].PrivateIpAddresses[].PrivateIpAddress' | sort -t . -k 3,3n -k 4,4n
+python3 find-available-ips.py IPV4 <IPV4 CIDR>
 ```
-`export FLOATING_IP=<Any_free_ip_from_above_list>`
-### For Ipv6 use:
+`export FLOATING_IP=<Any_free_ip_from_above_list_except_first4_and_last>`
 
+Refer [subnet-sizing](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html#subnet-sizing ) for more details
+### For IPV6 use:
+``` 
+python3 find-available-ips.py IPV6 <IPV6 CIDR>
 ```
-export SUBNET_ID=$(aws eks describe-nodegroup --cluster-name my-floatingip-democluster --nodegroup-name my-floatingip-nodegroup --query 'nodegroup.subnets[0]' --output text)
-aws ec2 describe-network-interfaces --filters Name=subnet-id,Values="$SUBNET_ID" |jq -r '.NetworkInterfaces[].Ipv6Addresses[].Ipv6Address'
-```
-` export FLOATING_IP=<Any_free_ip_not_from_above_list> `
+`export FLOATING_IP=<Any_free_ip_from_above_list_except_first4_and_last>`
+
+Refer [subnet-sizing](https://docs.aws.amazon.com/vpc/latest/userguide/configure-subnets.html#subnet-sizing ) for more details
 
 ### For Elastic IPs use:
 ```
@@ -168,3 +169,4 @@ This library is licensed under the MIT-0 LICENSE. See the LICENSE file.
 
 ## Contributors
 - Kamal Joshi
+
